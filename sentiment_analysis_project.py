@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pprint import pprint
+
 #Import HuggingFace models 
 from transformers import AutoTokenizer
 from transformers import AutoModelForSequenceClassification
@@ -30,10 +31,11 @@ nltk.download('vader_lexicon')
 file_path = "C:/Users/Creepy Weasel/Downloads/archive/Reviews.csv"
 df = pd.read_csv(file_path)
 
-#Limit dataframe to the first 500 rows 
+#Limit dataframe to the first 51 rows 
 df = df.head(51)
 print(df.shape)
 
+#Work Example that showcases a count of reviews by stars
 '''
 #Plot the count of reviews by starts
 ax = df['Score'].value_counts().sort_index()  \
@@ -41,11 +43,13 @@ ax = df['Score'].value_counts().sort_index()  \
           title ='Count of Reviews by Stars',
           figsize = (10,5))
 ax.set_xlabel("Review Stars")
-'''
 
 #Plot the bar graph
 #plt.show()
+'''
 
+#Work example that showcases tokens and chunks using nltk's chunk, word_tokenize, and pos_tag
+'''
 #Print the text from the 50th row or review
 example = df['Text'].values[50]
 print(example)
@@ -58,16 +62,15 @@ print(tokens[:10])
 tagged = nltk.pos_tag(tokens)
 print(tagged[:10])
 
-#Take tags and group them into chunks of tesxt
+#Take tags and group them into chunks of text
 entitites = nltk.chunk.ne_chunk(tagged)
 entitites.pprint()
+'''
 
 #Use NLTK's SentimentIntensityAnalyzer to get the neg/neu/pos scores of the text
 sia = SentimentIntensityAnalyzer()
-print(sia.polarity_scores('I am so happy!'))
-print(sia.polarity_scores('This is the worst thing ever!'))
-print(sia.polarity_scores(example))
 
+#Work example that showcases sia's polarity scores on just vaders model
 '''
 #Run the polarity score on the entire dataset 
 res = {}
@@ -75,8 +78,10 @@ for i, row in tqdm(df.iterrows(), total = len(df)):
     text = row['Text']
     myid = row['Id']
     res[myid] = sia.polarity_scores(text)
-pprint(res)
+'''
 
+#Work example that showcases Vader's dataframe 
+'''
 #Store into Pandas dataframe
 vaders = pd.DataFrame(res).T
 #Reset index and repece index with Id
@@ -84,7 +89,11 @@ vaders = vaders.reset_index().rename(columns={'index': 'Id'})
 #Merge scores onto df dataframe 
 vaders = vaders.merge(df, how = 'left')
 print(vaders.dtypes)
+'''
 
+
+#Work Example that showcases plots of Vader Model
+'''
 #Plot Vader results
 #Note to self: We use seaborn to integrate colosely with pandas data structures
 ax = sns.barplot(data = vaders, x = 'Score', y = 'compound')
@@ -102,6 +111,7 @@ ax1[2].set_title('Negative')
 #plt.tight_layout()
 #plt.show()
 '''
+
 
 #Roberta Model that picks up on relationships between words (Sarcasim, context, ect..)
 #Pretrained model trained on 123.86 M tweets until the end of 2021
@@ -130,7 +140,7 @@ def polarity_scores_roberta(example):
    
     return scores_dict
 
-#Run the polarity score on the entire dataset using Roberta model
+#Run the polarity score on the entire dataset using Roberta model and Vader model
 res = {}
 for i, row in tqdm(df.iterrows(), total = len(df)):
     try:
@@ -145,10 +155,11 @@ for i, row in tqdm(df.iterrows(), total = len(df)):
         roberta_result = polarity_scores_roberta(text)
         both = {**vader_result_rename, ** roberta_result}
         res[myid] = both
+    #Runtime error on reviews that have an out of bounds text
     except RuntimeError:
         print(f'Broke for id {myid}')
-    
 
+#Print the results of both models
 pprint(res)
 
 
@@ -160,6 +171,18 @@ results_df = results_df.reset_index().rename(columns={'index': 'Id'})
 results_df = results_df.merge(df, how = 'left')
 print(results_df)
 
+#Save results to an Excel file 
+excel_file_path = "C:/Users/Creepy Weasel/Downloads/Results.xlsx"
+results_df.to_excel(excel_file_path, index = False)
+print(f"Results saved to {excel_file_path}")
+
+#Compare Results between Roberta Model and Vader Model
+sns.pairplot(data = results_df,
+              vars = ['vader_neg', 'vader_neu', 'vader_pos', 'vader_compound',
+                    'roberta_neg', 'roberta_neu', 'roberta_pos'],
+                    hue='Score',
+                    palette='tab10')
+plt.show()
 
 
 
